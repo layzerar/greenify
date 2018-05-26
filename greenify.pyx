@@ -34,16 +34,16 @@ cdef int wait_gevent(greenify_watcher* watchers, int nwatchers, int timeout_in_m
     cdef float timeout_in_s
     cdef int i
 
-    hub = get_hub()
-    watchers_list = []
+    hub_io = get_hub().loop.io
+    watchers_list = [None] * nwatchers
     for i in range(nwatchers):
         fd = watchers[i].fd
         event = watchers[i].events
-        watcher = hub.loop.io(fd, event)
-        watchers_list.append(watcher)
+        watcher = hub_io(fd, event)
+        watchers_list[i] = watcher
 
     if timeout_in_ms != 0:
-        timeout_in_s = timeout_in_ms / 1000.0
+        timeout_in_s = timeout_in_ms * 0.001
         t = Timeout.start_new(timeout_in_s)
         try:
             wait(watchers_list)
@@ -59,7 +59,7 @@ cdef int wait_gevent(greenify_watcher* watchers, int nwatchers, int timeout_in_m
 def greenify():
     greenify_set_wait_callback(wait_gevent)
 
-def wait(watchers):
+def wait(list watchers):
     waiter = Waiter()
     switch = waiter.switch
     unique = object()
